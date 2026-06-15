@@ -1,5 +1,3 @@
-
-냉장고 자연대류 착상 · HTML
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -9,7 +7,7 @@
 <style>
   :root{
     --bg:#04070c;--hair:rgba(132,186,224,0.13);--hair-strong:rgba(132,186,224,0.26);
-    --ink:#a7b8c9;--ink-dim:#566678;--ink-faint:#384450;--cyan:#7fe0ff;--cyan-dim:#3a6680;
+    --ink:#c4d2e0;--ink-dim:#748899;--ink-faint:#52606e;--cyan:#9be8ff;--cyan-dim:#5286a3;
   }
   *{box-sizing:border-box;}
   html,body{margin:0;height:100%;background:#02040a;}
@@ -18,7 +16,7 @@
   .frame{width:100%;max-width:780px;border:1px solid var(--hair-strong);
     background:linear-gradient(180deg,#070b12,#04070c);box-shadow:0 24px 70px -32px rgba(0,0,0,0.92),inset 0 0 0 1px rgba(0,0,0,0.4);}
   .head{padding:13px 16px 12px;border-bottom:1px solid var(--hair);display:flex;flex-direction:column;gap:9px;}
-  .eyebrow{display:flex;justify-content:space-between;align-items:baseline;gap:12px;font-size:10.5px;letter-spacing:0.18em;text-transform:uppercase;color:var(--ink-dim);}
+  .eyebrow{display:flex;justify-content:space-between;align-items:baseline;gap:12px;font-size:10.5px;letter-spacing:0.18em;text-transform:uppercase;color:var(--ink);}
   .eyebrow b{color:var(--ink);font-weight:600;letter-spacing:0.16em;}
   .eyebrow .tag{color:var(--cyan-dim);}
   .eq{font-size:12.5px;line-height:1.5;color:var(--ink);letter-spacing:0.01em;white-space:nowrap;overflow-x:auto;padding-bottom:1px;}
@@ -43,10 +41,10 @@
   .strip{display:flex;align-items:center;gap:13px;flex-wrap:wrap;}
   .bar-wrap{display:flex;align-items:center;gap:8px;}
   .bar{width:128px;height:9px;border:1px solid var(--hair);background:linear-gradient(90deg,rgb(7,12,21) 0%,rgb(22,52,86) 40%,rgb(110,168,210) 72%,rgb(226,244,255) 100%);}
-  .bar-cap{font-size:9.5px;letter-spacing:0.1em;color:var(--ink-faint);text-transform:uppercase;}
+  .bar-cap{font-size:11px;letter-spacing:0.1em;color:var(--ink-dim);text-transform:uppercase;}
   .btn{font:inherit;font-size:10.5px;letter-spacing:0.12em;text-transform:uppercase;color:var(--ink-dim);background:transparent;border:1px solid var(--hair);padding:6px 11px;cursor:pointer;transition:.18s;}
   .btn:hover{color:var(--cyan);border-color:var(--cyan-dim);}.btn:active{transform:translateY(1px);}
-  .foot{padding:9px 16px 12px;border-top:1px solid var(--hair);font-size:9.5px;line-height:1.6;letter-spacing:0.04em;color:var(--ink-faint);}
+  .foot{padding:9px 16px 12px;border-top:1px solid var(--hair);font-size:11px;line-height:1.65;letter-spacing:0.04em;color:var(--ink-dim);}
   .foot .sep{color:var(--hair-strong);padding:0 5px;}
   @media (max-width:540px){body{padding:0;}.frame{border-left:none;border-right:none;}.eq{font-size:10.5px;}.row{gap:10px;}.bar{width:88px;}}
 </style>
@@ -85,7 +83,7 @@
     <br>유동은 Navier–Stokes 방정식을, 착상층은 표면 질량수지를 실시간으로 적분한 것임.
   </div>
 </div>
- 
+
 <script>
 "use strict";
 (function(){
@@ -96,11 +94,11 @@
   document.getElementById('meshN').textContent=W+"×"+H;
   const projIters=small?13:16, tempIters=6, dt=1.0, vmax=3.0, buoy=3.2, noiseAmp=0.018;
   fieldC.width=W; fieldC.height=H; iceC.width=W; iceC.height=H;
- 
+
   const u=new Float32Array(SZ),v=new Float32Array(SZ),u0=new Float32Array(SZ),v0=new Float32Array(SZ);
   const T=new Float32Array(SZ),T0=new Float32Array(SZ),p=new Float32Array(SZ),divg=new Float32Array(SZ);
   const solidBase=new Uint8Array(SZ), solid=new Uint8Array(SZ), ice=new Float32Array(SZ), SP=new Float32Array(SZ);
- 
+
   // fridge standing on floor (cold) — side view
   const half=Math.max(7,Math.round(0.09*W)), cx=Math.round(W*0.5), fx0=cx-half, fx1=cx+half-1;
   const fh=Math.round(0.55*H), jtop=H-fh+1;
@@ -113,7 +111,7 @@
     for(let j=1;j<=H;j++){const row=stride*j;for(let i=1;i<=W;i++){const idx=i+row;
       solid[idx]=(solidBase[idx]||ice[idx]>ICE_SOLID)?1:0;}}
   }
- 
+
   // ---- cycle ----
   let phase='accrete', Tfrac=0.09, depRate=0.020, riv=[];
   function newCycle(){ Tfrac=0.055+0.075*Math.random(); depRate=0.018*(0.75+0.5*Math.random()); }
@@ -125,11 +123,11 @@
     for(let k=0;k<n;k++){ const c=cols.length?cols[(Math.random()*cols.length)|0]:[cx,jtop];
       riv.push({x:c[0]+(Math.random()-0.5)*2, y:c[1], sp:0.6+Math.random()*1.0, w:1.4+Math.random()*1.6, trail:[]}); }
   }
- 
+
   function reset(){ u.fill(0);v.fill(0);u0.fill(0);v0.fill(0);T.fill(0);T0.fill(0);p.fill(0);divg.fill(0);ice.fill(0);
     buildBase(); recomputeSolid(); for(let i=0;i<SZ;i++) if(solid[i]) T[i]=-1; phase='accrete'; newCycle(); riv=[];
     pctx.clearRect(0,0,flowC.width,flowC.height); seedParticles(); }
- 
+
   // ---- solver (Boussinesq natural convection) ----
   function set_bnd(b,x){
     for(let j=1;j<=H;j++){x[0+stride*j]=(b===1)?-x[1+stride*j]:x[1+stride*j];x[(W+1)+stride*j]=(b===1)?-x[W+stride*j]:x[W+stride*j];}
@@ -162,7 +160,7 @@
     for(let i=0;i<=W+1;i++){T[i]=0;T[i+stride*(H+1)]=0;}
     for(let idx=0;idx<SZ;idx++) if(solid[idx]) T[idx]=-1;
   }
- 
+
   // ---- frost accretion / defrost ----
   let coverage=0, maxIce=0;
   function accrete(){
@@ -202,7 +200,7 @@
       if(coverage<0.004 && riv.length===0){ for(let i=0;i<SZ;i++) ice[i]=0; phase='accrete'; newCycle(); }
     }
   }
- 
+
   function step(){
     recomputeSolid();
     for(let j=1;j<=H;j++){const row=stride*j;for(let i=1;i<=W;i++){const idx=i+row;if(solid[idx])continue;
@@ -213,7 +211,7 @@
     T0.set(T); lin_solve(0,T,T0,0.00009*W*H,1+4*0.00009*W*H,tempIters); T0.set(T); advect(0,T,T0,u,v); applyTempBC();
     accretionStep();
   }
- 
+
   // ---- particles (cold cascade) ----
   const NP=small?1600:3200;
   const px=new Float32Array(NP),py=new Float32Array(NP),ox=new Float32Array(NP),oy=new Float32Array(NP),life=new Float32Array(NP);
@@ -227,14 +225,14 @@
     const i0=x|0,j0=y|0,i1=i0+1,j1=j0+1,s1=x-i0,s0=1-s1,t1=y-j0,t0=1-t1,a0=j0*stride,a1=j1*stride;
     return s0*(t0*v[i0+a0]+t1*v[i0+a1])+s1*(t0*v[i1+a0]+t1*v[i1+a1]);}
   function sT(x,y){let i=Math.round(x),j=Math.round(y);if(i<1)i=1;else if(i>W)i=W;if(j<1)j=1;else if(j>H)j=H;return T[i+stride*j];}
- 
+
   // ---- colormaps ----
   const stops=[[0,9,15,26],[0.3,20,52,90],[0.58,40,118,180],[0.8,110,196,236],[1,212,244,255]];
   const lutR=new Uint8Array(256),lutG=new Uint8Array(256),lutB=new Uint8Array(256);
   for(let k=0;k<256;k++){const t=k/255;let a=stops[0],b=stops[stops.length-1];
     for(let s=0;s<stops.length-1;s++){if(t>=stops[s][0]&&t<=stops[s+1][0]){a=stops[s];b=stops[s+1];break;}}
     const f=(t-a[0])/Math.max(1e-6,(b[0]-a[0]));lutR[k]=a[1]+(b[1]-a[1])*f;lutG[k]=a[2]+(b[2]-a[2])*f;lutB[k]=a[3]+(b[3]-a[3])*f;}
- 
+
   const fimg=fctx.createImageData(W,H),fd=fimg.data;
   function renderField(){
     for(let j=1;j<=H;j++){const row=stride*j;for(let i=1;i<=W;i++){
@@ -253,11 +251,11 @@
       id[o+3]=Math.min(255, t*240*spk+bump);}}
     ictx.putImageData(iimg,0,0);
   }
- 
+
   let cw=0,ch=0,sx=1,sy=1;
   function resize(){const r=stage.getBoundingClientRect(),dpr=Math.min(window.devicePixelRatio||1,2);
     cw=Math.max(1,Math.round(r.width*dpr));ch=Math.max(1,Math.round(r.height*dpr));flowC.width=cw;flowC.height=ch;sx=cw/W;sy=ch/H;}
- 
+
   function drawFridge(){
     pctx.globalCompositeOperation='source-over';
     const left=(fx0-0.5)*sx,top=(jtop-0.5)*sy,w=((fx1-fx0)+1)*sx,h=((H-jtop)+1.5)*sy;
@@ -302,7 +300,7 @@
       const i=Math.round(px[k]),j=Math.round(py[k]);
       if(px[k]<0.5||px[k]>W||py[k]<0.5||py[k]>H||life[k]<=0||(i>=0&&i<=W+1&&j>=0&&j<=H+1&&solid[i+stride*j])) respawn(k);}
   }
- 
+
   let frame=0,paused=false;
   function render(){
     renderField();
@@ -318,12 +316,12 @@
       const ph=document.getElementById('phase');
       if(phase==='accrete'){ph.textContent='착상 진행';ph.style.color='#7fe0ff';}else{ph.textContent='제상 — 융해';ph.style.color='#9fd0e8';}
     }} requestAnimationFrame(tick); }
- 
+
   document.getElementById('reset').addEventListener('click',reset);
   const pb=document.getElementById('pause');
   pb.addEventListener('click',()=>{paused=!paused;document.getElementById('frame').classList.toggle('paused',paused);pb.textContent=paused?'재생':'정지';});
   let rt;window.addEventListener('resize',()=>{clearTimeout(rt);rt=setTimeout(resize,120);});
- 
+
   reset(); resize();
   for(let s=0;s<40;s++) step();
   render(); requestAnimationFrame(tick);
