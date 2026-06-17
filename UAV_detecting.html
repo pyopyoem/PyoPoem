@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>자율 순찰 적외선 표적 탐지</title>
+<style>
+  :root{
+    --bg:#04070c;--hair:rgba(132,186,224,0.13);--hair-strong:rgba(132,186,224,0.26);
+    --ink:#c4d2e0;--ink-dim:#748899;--ink-faint:#52606e;--cyan:#9be8ff;--cyan-dim:#5286a3;
+    --red:#ff3b3b;--red-dim:#a13030;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;height:100%;background:#02040a;}
+  body{color:var(--ink);font-family:ui-monospace,"SFMono-Regular","SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+    -webkit-font-smoothing:antialiased;display:flex;align-items:center;justify-content:center;padding:18px;}
+  .frame{width:100%;max-width:780px;border:1px solid var(--hair-strong);
+    background:linear-gradient(180deg,#070b12,#04070c);box-shadow:0 24px 70px -32px rgba(0,0,0,0.92),inset 0 0 0 1px rgba(0,0,0,0.4);}
+  .head{padding:13px 16px 12px;border-bottom:1px solid var(--hair);display:flex;flex-direction:column;gap:8px;}
+  .eyebrow{display:flex;justify-content:space-between;align-items:baseline;gap:12px;font-size:10.5px;letter-spacing:0.18em;text-transform:uppercase;color:var(--ink);}
+  .eyebrow b{font-weight:600;letter-spacing:0.16em;}
+  .eyebrow .tag{color:var(--cyan-dim);}
+  .spec{font-size:10.5px;line-height:1.5;color:var(--ink-dim);letter-spacing:0.08em;white-space:nowrap;overflow-x:auto;text-transform:uppercase;}
+  .spec b{color:var(--ink);font-weight:500;}.spec .sep{color:var(--hair-strong);padding:0 7px;}
+  .spec::-webkit-scrollbar{height:0;}
+
+  .stage{position:relative;width:100%;aspect-ratio:200/120;background:#0a1410;overflow:hidden;border-bottom:1px solid var(--hair);}
+  .stage canvas{position:absolute;inset:0;width:100%;height:100%;display:block;}
+  #feed{image-rendering:pixelated;image-rendering:crisp-edges;}
+  .vig{position:absolute;inset:0;pointer-events:none;box-shadow:inset 0 0 110px -30px rgba(0,0,0,0.85);}
+
+  .ov{position:absolute;pointer-events:none;font-variant-numeric:tabular-nums;}
+  .det{left:11px;top:10px;display:flex;flex-direction:column;gap:3px;}
+  .det .cnt{font-size:16px;letter-spacing:0.12em;color:var(--ink);}
+  .det .cnt b{color:var(--red);font-weight:600;}
+  .det .sub{font-size:9px;letter-spacing:0.24em;color:var(--ink-faint);text-transform:uppercase;}
+  .coord{left:11px;bottom:9px;font-size:9.5px;letter-spacing:0.12em;color:var(--ink-faint);text-transform:uppercase;}
+  .stat{right:11px;bottom:9px;font-size:9.5px;letter-spacing:0.18em;color:var(--ink-faint);text-transform:uppercase;text-align:right;}
+
+  .snd{position:absolute;right:9px;top:8px;width:30px;height:30px;border:1px solid var(--hair);background:rgba(5,9,15,0.55);
+    display:none;align-items:center;justify-content:center;cursor:pointer;transition:.18s;border-radius:2px;z-index:4;}
+  .snd.show{display:flex;}
+  .snd:hover{border-color:var(--cyan-dim);}
+  .snd svg{width:15px;height:15px;display:block;}
+
+  .play{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:6;cursor:pointer;
+    background:rgba(4,8,12,0.55);transition:opacity .25s;}
+  .play.hidden{opacity:0;pointer-events:none;}
+  .play .disc{width:74px;height:74px;border-radius:50%;background:rgba(8,13,19,0.92);border:1px solid var(--hair-strong);
+    display:flex;align-items:center;justify-content:center;box-shadow:0 8px 30px -8px rgba(0,0,0,0.8);transition:.18s;}
+  .play:hover .disc{border-color:var(--cyan-dim);background:rgba(10,16,24,0.95);}
+  .play .disc svg{width:30px;height:30px;margin-left:4px;}
+  .play .lab{position:absolute;bottom:calc(50% - 70px);font-size:9.5px;letter-spacing:0.26em;color:var(--ink-dim);text-transform:uppercase;}
+
+  .console{padding:12px 16px 14px;display:flex;align-items:center;gap:13px;flex-wrap:wrap;}
+  .lede{font-size:10.5px;letter-spacing:0.06em;color:var(--ink-dim);line-height:1.6;}
+  .console .sep{color:var(--hair-strong);padding:0 5px;}
+  .foot{padding:9px 16px 12px;border-top:1px solid var(--hair);font-size:11px;line-height:1.65;letter-spacing:0.04em;color:var(--ink-dim);}
+  .foot .sep{color:var(--hair-strong);padding:0 5px;}
+  @media (max-width:540px){
+    body{padding:0;}.frame{border-left:none;border-right:none;}
+    .spec{font-size:9.5px;}.det .cnt{font-size:14px;}.foot{font-size:10px;}.play .disc{width:64px;height:64px;}
+  }
+</style>
+</head>
+<body>
+<div class="frame" id="frame">
+  <div class="head">
+    <div class="eyebrow"><span><b>[붙임 2]</b> &nbsp;표적 식별 기술 시뮬레이션 결과</span><span class="tag"></span></div>
+    <div class="spec">센서 <b>IR</b><span class="sep">·</span><b>MISSION PLANNING</b><span class="sep">·</span>검출 <b>CNN</b><span class="sep">·</span>처리 <b>실시간</b></div>
+  </div>
+
+  <div class="stage" id="stage">
+    <canvas id="feed"></canvas>
+    <canvas id="hud"></canvas>
+    <div class="vig"></div>
+    <div class="ov det"><span class="cnt"><b id="cnt">0</b>/<span id="tot">0</span></span><span class="sub">표적 식별</span></div>
+    <div class="ov coord" id="coord">SECTOR 00 · 00:00</div>
+    <div class="ov stat">IR / THERMAL</div>
+
+    <div class="snd" id="snd" title="소리 끄기">
+      <svg id="sndIcon" viewBox="0 0 24 24" fill="none" stroke="#9be8ff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 9 v6 h4 l5 4 V5 L8 9 H4 z" fill="rgba(155,232,255,0.12)"/>
+        <line class="mute" x1="17" y1="9" x2="22" y2="15" style="opacity:0"/><line class="mute" x1="22" y1="9" x2="17" y2="15" style="opacity:0"/>
+        <path class="wave" d="M16.5 8.5 a5 5 0 0 1 0 7"/>
+        <path class="wave" d="M19 6.5 a8 8 0 0 1 0 11"/>
+      </svg>
+    </div>
+
+    <div class="play" id="play">
+      <div class="disc"><svg viewBox="0 0 24 24" fill="#cfe6f5"><path d="M7 5 v14 l12 -7 z"/></svg></div>
+      <div class="lab">재생</div>
+    </div>
+  </div>
+
+  <div class="console">
+    <span class="lede">AI 기반 은폐 표적 정밀 타격 무인기 체계 개발 시뮬레이션 결과</span>
+  </div>
+  <div class="foot">
+    센서: 열영상(IR)<span class="sep">·</span>순찰: 자동 sweep<span class="sep">·</span>표적: 검출 시 적색 표시 및 계수<span class="sep">·</span>본 화면은 탐지까지만 수행함.
+    <br>표적의 위치는 열 신호로만 식별되며, 식별 이후는 기록하지 않음.
+  </div>
+</div>
+
+<script>
+"use strict";
+(function(){
+  const stage=document.getElementById('stage'), feedC=document.getElementById('feed'), hudC=document.getElementById('hud');
+  const fx=feedC.getContext('2d'), hx=hudC.getContext('2d');
+  const reduce=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  const PW=200, PH=120;
+  feedC.width=PW; feedC.height=PH; fx.imageSmoothingEnabled=false;
+
+  // ---- forest base: brighter muddy military-green canopy ----
+  const forest=document.createElement('canvas'); forest.width=PW; forest.height=PH;
+  const gx=forest.getContext('2d');
+  function buildForest(){
+    gx.fillStyle='#12200f'; gx.fillRect(0,0,PW,PH);
+    for(let i=0;i<5000;i++){
+      const x=Math.random()*PW|0, y=Math.random()*PH|0, v=Math.random();
+      gx.fillStyle = v<0.4?'rgba(20,34,16,0.7)' : v<0.7?'rgba(15,26,13,0.7)' : v<0.88?'rgba(26,42,20,0.6)':'rgba(10,18,9,0.7)';
+      gx.fillRect(x,y,1,1);
+    }
+    const N=230;
+    for(let i=0;i<N;i++){
+      const cx=Math.random()*PW, cy=Math.random()*PH, r=2.4+Math.random()*4.2;
+      const tone=Math.random();
+      const mid = tone<0.5?[34,52,26] : tone<0.82?[28,44,22] : [40,60,30];
+      for(let a=0;a<r*r*3.2;a++){
+        const ang=Math.random()*6.283, rr=Math.random()*r;
+        const px=(cx+Math.cos(ang)*rr)|0, py=(cy+Math.sin(ang)*rr)|0;
+        if(px<0||px>=PW||py<0||py>=PH)continue;
+        const lx=Math.cos(ang), ly=Math.sin(ang);
+        const lit = 0.72 + 0.5*(-(lx*0.6+ly*0.6))*(rr/r);
+        const sh=Math.max(0.45,Math.min(1.25,lit));
+        gx.fillStyle='rgba('+((mid[0]*sh)|0)+','+((mid[1]*sh)|0)+','+((mid[2]*sh)|0)+',0.85)';
+        gx.fillRect(px,py,1,1);
+      }
+      gx.fillStyle='rgba(58,82,40,0.5)'; gx.fillRect((cx-r*0.4)|0,(cy-r*0.4)|0,1,1);
+      gx.fillStyle='rgba(64,90,44,0.35)'; gx.fillRect((cx-r*0.4+1)|0,(cy-r*0.4)|0,1,1);
+      gx.fillStyle='rgba(6,12,6,0.45)'; gx.fillRect((cx+r*0.55)|0,(cy+r*0.55)|0,1,1);
+    }
+    for(let i=0;i<14;i++){
+      const cx=Math.random()*PW, cy=Math.random()*PH, r=3+Math.random()*5;
+      for(let a=0;a<r*r*2;a++){
+        const ang=Math.random()*6.283, rr=Math.random()*r;
+        const px=(cx+Math.cos(ang)*rr)|0, py=(cy+Math.sin(ang)*rr)|0;
+        if(px<0||px>=PW||py<0||py>=PH)continue;
+        gx.fillStyle='rgba(22,18,12,0.18)'; gx.fillRect(px,py,1,1);
+      }
+    }
+  }
+  buildForest();
+
+  // ---- scope / drone / sweep ----
+  const R=30, mx=18, myTop=22, myBot=20, spd=reduce?0.7:0.9;
+  let rows=[]; for(let y=myTop; y<=PH-myBot+0.1; y+=R*0.92) rows.push(Math.round(y));
+  if(rows[rows.length-1] < PH-myBot-3) rows.push(PH-myBot);
+  let drone={x:mx, y:rows[0]}, dir=1, rowI=0, rotor=0;
+
+  // ---- humans ----
+  let humans=[], total=0, count=0, state='idle', stateT=0, detSeq=0;
+  function spawn(){
+    total=4+(Math.random()*3|0);
+    humans=[]; let tries=0;
+    while(humans.length<total && tries<700){
+      tries++;
+      const x=mx+8+Math.random()*(PW-2*mx-16), y=myTop+4+Math.random()*(PH-myTop-myBot-8);
+      let ok=true;
+      for(const h of humans){ if(Math.hypot(h.x-x,h.y-y)<R*0.8){ok=false;break;} }
+      if(ok) humans.push({x,y,det:false,dt:0,id:0,rot:Math.random()*6.283});
+    }
+    total=humans.length; count=0; rowI=0; dir=1; drone.x=mx; drone.y=rows[0];
+    document.getElementById('tot').textContent=total;
+    document.getElementById('cnt').textContent=0;
+    state='run';
+  }
+
+  // ---- audio ----
+  let AC=null, master=null, audioOn=true, started=false;
+  function initAudio(){
+    if(started) return; started=true;
+    try{
+      AC=new (window.AudioContext||window.webkitAudioContext)();
+      master=AC.createGain(); master.gain.value=1; master.connect(AC.destination);
+      const lp=AC.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=250; lp.Q.value=0.6;
+      const dg=AC.createGain(); dg.gain.value=0.07;
+      const o1=AC.createOscillator(); o1.type='sawtooth'; o1.frequency.value=66;
+      const o2=AC.createOscillator(); o2.type='sawtooth'; o2.frequency.value=68.6;
+      const o3=AC.createOscillator(); o3.type='triangle'; o3.frequency.value=132;
+      const g3=AC.createGain(); g3.gain.value=0.22;
+      o1.connect(lp); o2.connect(lp); o3.connect(g3); g3.connect(lp);
+      lp.connect(dg); dg.connect(master);
+      const lfo=AC.createOscillator(); lfo.type='sine'; lfo.frequency.value=10.5;
+      const lfoG=AC.createGain(); lfoG.gain.value=0.03; lfo.connect(lfoG); lfoG.connect(dg.gain);
+      o1.start(); o2.start(); o3.start(); lfo.start();
+    }catch(e){ AC=null; }
+  }
+  function beep(){
+    if(!AC||!audioOn) return;
+    try{
+      const t=AC.currentTime;
+      const o=AC.createOscillator(); o.type='square'; o.frequency.value=1000;
+      const g=AC.createGain();
+      g.gain.setValueAtTime(0.0001,t);
+      g.gain.exponentialRampToValueAtTime(0.15,t+0.004);
+      g.gain.exponentialRampToValueAtTime(0.0001,t+0.075);
+      o.connect(g); g.connect(master); o.start(t); o.stop(t+0.09);
+    }catch(e){}
+  }
+  const sndBtn=document.getElementById('snd'), icon=document.getElementById('sndIcon');
+  function reflectSound(){
+    icon.querySelectorAll('.mute').forEach(e=>e.style.opacity=audioOn?'0':'1');
+    icon.querySelectorAll('.wave').forEach(e=>e.style.opacity=audioOn?'0.9':'0');
+    sndBtn.title=audioOn?'소리 끄기':'소리 켜기';
+  }
+  sndBtn.addEventListener('click',()=>{ audioOn=!audioOn; if(master) master.gain.value=audioOn?1:0; reflectSound(); });
+
+  const playBtn=document.getElementById('play');
+  function start(){
+    initAudio(); if(AC&&AC.state==='suspended') AC.resume();
+    audioOn=true; if(master) master.gain.value=1; reflectSound();
+    sndBtn.classList.add('show'); playBtn.classList.add('hidden');
+    spawn();
+  }
+  playBtn.addEventListener('click',start);
+
+  // ---- thermal crouched human (overhead) ----
+  function thermalHuman(h, flash){
+    const x=h.x, y=h.y, rot=h.rot, boost=flash?1.0:0.9;
+    let halo=fx.createRadialGradient(x,y,0,x,y,9);
+    halo.addColorStop(0,'rgba(210,150,90,'+(0.5*(flash?1.5:1))+')');
+    halo.addColorStop(0.6,'rgba(120,70,45,0.28)'); halo.addColorStop(1,'rgba(60,40,30,0)');
+    fx.fillStyle=halo; fx.beginPath(); fx.arc(x,y,9,0,6.2832); fx.fill();
+    fx.save(); fx.translate(x,y); fx.rotate(rot);
+    let tg=fx.createRadialGradient(0,0.6,0,0,0.6,5);
+    tg.addColorStop(0,'rgba(244,236,214,'+boost+')'); tg.addColorStop(0.45,'rgba(232,182,108,'+boost+')'); tg.addColorStop(1,'rgba(150,96,60,0)');
+    fx.fillStyle=tg; fx.beginPath(); fx.ellipse(0,0.6,3.4,2.2,0,0,6.2832); fx.fill();
+    let hg=fx.createRadialGradient(0,-2.4,0,0,-2.4,2.2);
+    hg.addColorStop(0,'rgba(255,250,238,1)'); hg.addColorStop(0.5,'rgba(244,224,180,0.95)'); hg.addColorStop(1,'rgba(200,150,100,0)');
+    fx.fillStyle=hg; fx.beginPath(); fx.arc(0,-2.4,2.0,0,6.2832); fx.fill();
+    fx.fillStyle='rgba(236,196,140,'+(0.8*boost)+')'; fx.beginPath(); fx.ellipse(0,2.6,1.8,1.2,0,0,6.2832); fx.fill();
+    fx.restore();
+  }
+
+  // ---- drone (overhead quad) ----
+  function drawDrone(){
+    const x=drone.x, y=drone.y; rotor+=0.6;
+    fx.strokeStyle='rgba(120,140,155,0.9)'; fx.lineWidth=1.4;
+    fx.beginPath(); fx.moveTo(x-5,y-5); fx.lineTo(x+5,y+5); fx.moveTo(x+5,y-5); fx.lineTo(x-5,y+5); fx.stroke();
+    const ends=[[-5,-5],[5,-5],[5,5],[-5,5]];
+    for(const e of ends){ const ex=e[0],ey=e[1];
+      fx.fillStyle='rgba(150,175,195,0.16)'; fx.beginPath(); fx.arc(x+ex,y+ey,3.2,0,6.2832); fx.fill();
+      fx.strokeStyle='rgba(180,200,215,0.5)'; fx.lineWidth=0.8; const a=rotor+(ex+ey);
+      fx.beginPath();
+      fx.moveTo(x+ex+Math.cos(a)*3,y+ey+Math.sin(a)*3); fx.lineTo(x+ex-Math.cos(a)*3,y+ey-Math.sin(a)*3);
+      fx.moveTo(x+ex+Math.cos(a+1.57)*3,y+ey+Math.sin(a+1.57)*3); fx.lineTo(x+ex-Math.cos(a+1.57)*3,y+ey-Math.sin(a+1.57)*3);
+      fx.stroke();
+      fx.fillStyle='rgba(70,82,92,0.95)'; fx.fillRect((x+ex)|0,(y+ey)|0,1,1);
+    }
+    fx.fillStyle='rgba(40,48,56,0.98)'; fx.beginPath(); fx.ellipse(x,y,3,3.4,0,0,6.2832); fx.fill();
+    fx.fillStyle='rgba(95,115,130,0.95)'; fx.beginPath(); fx.ellipse(x,y,1.6,2,0,0,6.2832); fx.fill();
+    fx.fillStyle='rgba(120,230,160,0.95)'; fx.fillRect((x)|0,(y-1)|0,1,1);
+  }
+
+  let cw=0,ch=0,sX=1,sY=1,t0=performance.now();
+  function resize(){
+    const r=stage.getBoundingClientRect(),dpr=Math.min(window.devicePixelRatio||1,2);
+    cw=Math.max(1,Math.round(r.width*dpr)); ch=Math.max(1,Math.round(r.height*dpr));
+    hudC.width=cw; hudC.height=ch; sX=cw/PW; sY=ch/PH;
+  }
+  function advanceRow(){ rowI++; dir*=-1; if(rowI>=rows.length) rowI=0; drone.y=rows[rowI]; }
+
+  function step(now){
+    if(state==='run'){
+      drone.x += spd*dir;
+      if(dir>0 && drone.x>=PW-mx){ drone.x=PW-mx; advanceRow(); }
+      else if(dir<0 && drone.x<=mx){ drone.x=mx; advanceRow(); }
+      for(const h of humans){
+        if(h.det) continue;
+        if(Math.hypot(h.x-drone.x,h.y-drone.y) < R*0.86){
+          h.det=true; h.dt=now; h.id=++detSeq; count++;
+          document.getElementById('cnt').textContent=count; beep();
+          if(count>=total){ state='clear'; stateT=now; }
+        }
+      }
+    } else if(state==='clear'){
+      if(now-stateT>1800){ detSeq=0; spawn(); }
+    }
+  }
+
+  function drawFeed(now){
+    fx.clearRect(0,0,PW,PH);
+    fx.drawImage(forest,0,0);
+    if(state==='idle'){ fx.fillStyle='rgba(4,8,10,0.45)'; fx.fillRect(0,0,PW,PH); return; }
+    fx.save(); fx.beginPath(); fx.arc(drone.x,drone.y,R,0,6.2832); fx.clip();
+    fx.fillStyle='#0e131b'; fx.fillRect(drone.x-R,drone.y-R,2*R,2*R);
+    const seed=(now*0.05)|0;
+    for(let i=0;i<120;i++){
+      const a=(i*97+seed)%223, b=(i*53+((seed*7)%101))%223;
+      const px=drone.x-R+(a/223)*2*R, py=drone.y-R+(b/223)*2*R;
+      fx.fillStyle=(i%3===0)?'rgba(42,54,68,0.5)':'rgba(22,30,40,0.6)'; fx.fillRect(px|0,py|0,1,1);
+    }
+    if(!reduce){ for(let i=0;i<30;i++){ const px=drone.x-R+Math.random()*2*R, py=drone.y-R+Math.random()*2*R;
+      fx.fillStyle='rgba(120,150,170,0.05)'; fx.fillRect(px|0,py|0,1,1); } }
+    for(const h of humans){
+      if(Math.hypot(h.x-drone.x,h.y-drone.y) <= R+9){
+        thermalHuman(h, h.det && (now-h.dt)<200);
+      }
+    }
+    fx.restore();
+    fx.strokeStyle='rgba(150,180,200,0.22)'; fx.lineWidth=1;
+    fx.beginPath(); fx.arc(drone.x,drone.y,R-0.5,0,6.2832); fx.stroke();
+    drawDrone();
+  }
+
+  function box(h, fresh){
+    const w=15*sX, h2=20*sY, x=h.x*sX-w/2, y=h.y*sY-h2/2;
+    const col=fresh?'rgba(255,59,59,':'rgba(161,48,48,', a=fresh?0.95:0.72;
+    hx.strokeStyle=col+a+')'; hx.lineWidth=fresh?1.6:1.2;
+    const c=Math.min(w,h2)*0.30;
+    hx.beginPath();
+    hx.moveTo(x,y+c); hx.lineTo(x,y); hx.lineTo(x+c,y);
+    hx.moveTo(x+w-c,y); hx.lineTo(x+w,y); hx.lineTo(x+w,y+c);
+    hx.moveTo(x+w,y+h2-c); hx.lineTo(x+w,y+h2); hx.lineTo(x+w-c,y+h2);
+    hx.moveTo(x+c,y+h2); hx.lineTo(x,y+h2); hx.lineTo(x,y+h2-c);
+    hx.stroke();
+    const fs=Math.max(7,7*Math.min(sX,sY));
+    hx.fillStyle=col+(fresh?0.95:0.72)+')';
+    hx.font=fs.toFixed(0)+'px ui-monospace,monospace'; hx.textBaseline='alphabetic';
+    hx.fillText('D-'+String(h.id).padStart(2,'0'), x, y-3*sY);
+  }
+  function drawHud(now){
+    hx.clearRect(0,0,cw,ch);
+    if(state==='idle') return;
+    const dx=drone.x*sX, dy=drone.y*sY, rr=R*sX;
+    hx.strokeStyle='rgba(120,160,185,0.30)'; hx.lineWidth=1;
+    hx.beginPath(); hx.arc(dx,dy,rr,0,6.2832); hx.stroke();
+    hx.strokeStyle='rgba(120,160,185,0.14)';
+    hx.beginPath(); hx.arc(dx,dy,rr*0.62,0,6.2832); hx.stroke();
+    hx.strokeStyle='rgba(140,175,195,0.32)';
+    hx.beginPath();
+    hx.moveTo(dx-rr,dy); hx.lineTo(dx-rr*0.55,dy); hx.moveTo(dx+rr*0.55,dy); hx.lineTo(dx+rr,dy);
+    hx.moveTo(dx,dy-rr); hx.lineTo(dx,dy-rr*0.55); hx.moveTo(dx,dy+rr*0.55); hx.lineTo(dx,dy+rr);
+    hx.stroke();
+    if(!reduce){
+      const ang=(now*0.0015)%6.2832;
+      hx.save(); hx.beginPath(); hx.arc(dx,dy,rr,0,6.2832); hx.clip();
+      const grd=hx.createLinearGradient(dx,dy,dx+Math.cos(ang)*rr,dy+Math.sin(ang)*rr);
+      grd.addColorStop(0,'rgba(150,200,220,0)'); grd.addColorStop(1,'rgba(150,200,220,0.22)');
+      hx.strokeStyle=grd; hx.lineWidth=1.4;
+      hx.beginPath(); hx.moveTo(dx,dy); hx.lineTo(dx+Math.cos(ang)*rr,dy+Math.sin(ang)*rr); hx.stroke();
+      hx.restore();
+    }
+    let newest=-1, nt=-1;
+    for(let i=0;i<humans.length;i++){ if(humans[i].det && humans[i].dt>nt){nt=humans[i].dt;newest=i;} }
+    for(let i=0;i<humans.length;i++){ const h=humans[i]; if(!h.det) continue; box(h, i===newest && (now-h.dt)<2600); }
+  }
+
+  let lastHud=0;
+  function updateReadout(now){
+    const sec=Math.floor((now-t0)/1000);
+    const mm=String(Math.floor(sec/60)).padStart(2,'0'), ss=String(sec%60).padStart(2,'0');
+    const sector=String(((rowI+1)*7+(drone.x>PW/2?1:0))%97).padStart(2,'0');
+    document.getElementById('coord').textContent='SECTOR '+sector+' · '+mm+':'+ss;
+  }
+  function tick(now){
+    step(now); drawFeed(now); drawHud(now);
+    if(now-lastHud>250){ updateReadout(now); lastHud=now; }
+    requestAnimationFrame(tick);
+  }
+  let rt; window.addEventListener('resize',()=>{clearTimeout(rt);rt=setTimeout(resize,120);});
+  reflectSound(); resize();
+  requestAnimationFrame(tick);
+})();
+</script>
+</body>
+</html>
